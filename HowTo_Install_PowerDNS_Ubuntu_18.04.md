@@ -708,6 +708,156 @@ Use 'sudo apt autoremove' to remove them.
 0 to upgrade, 0 to newly install, 0 to remove and 0 not to upgrade.
 ```
 
+
+rwhitear@ns1:~$ sudo apt-get install -y libmysqlclient-dev python-mysqldb libsasl2-dev libffi-dev \
+libldap2-dev libssl-dev libxml2-dev libxslt1-dev libxmlsec1-dev pkg-config
+
+
+rwhitear@ns1:~$ sudo curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+
+rwhitear@ns1:~$ sudo -i
+root@ns1:~# echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list
+root@ns1:~# exit
+logout
+rwhitear@ns1:~$
+
+
+rwhitear@ns1:~$ sudo apt-get update
+
+
+rwhitear@ns1:~$ sudo apt-get install  yarn
+
+
+rwhitear@ns1:~$ sudo git clone https://github.com/ngoduykhanh/PowerDNS-Admin.git /opt/web/powerdns-admin
+
+
+rwhitear@ns1:~$ cd /opt/web/powerdns-admin
+
+
+rwhitear@ns1:/opt/web/powerdns-admin$ sudo apt-get install python3-venv
+
+
+
+rwhitear@ns1:/opt/web/powerdns-admin$ sudo python3 -m venv flask
+
+rwhitear@ns1:/opt/web/powerdns-admin$ sudo -i
+
+
+root@ns1:~# cd /opt/web/powerdns-admin/
+
+
+root@ns1:/opt/web/powerdns-admin# . flask/bin/activate
+(flask) root@ns1:/opt/web/powerdns-admin#
+
+
+(flask) root@ns1:/opt/web/powerdns-admin# pip install --upgrade pip
+
+
+(flask) root@ns1:/opt/web/powerdns-admin# pip install -r requirements.txt
+
+
+(flask) root@ns1:/opt/web/powerdns-admin# exit
+logout
+rwhitear@ns1:/opt/web/powerdns-admin$ mysql -u root -p
+
+
+MariaDB [(none)]> CREATE DATABASE powerdnsadmin;
+
+MariaDB [(none)]> GRANT ALL PRIVILEGES ON powerdnsadmin.* TO 'pdnsadminuser'@'%' IDENTIFIED BY 'C!5co123';
+
+MariaDB [(none)]> FLUSH PRIVILEGES;
+Query OK, 0 rows affected (0.001 sec)
+
+MariaDB [(none)]> quit
+
+
+
+rwhitear@ns1:/opt/web/powerdns-admin$ sudo vi ./powerdnsadmin/default_config.py
+
+
+``` sh
+### DATABASE CONFIG
+SQLA_DB_USER = 'powerdns'
+SQLA_DB_PASSWORD = 'C!5co123'
+SQLA_DB_HOST = '127.0.0.1'
+SQLA_DB_NAME = 'powerdns'
+SQLALCHEMY_TRACK_MODIFICATIONS = True
+
+### DATBASE - MySQL
+SQLALCHEMY_DATABASE_URI = 'mysql://'+SQLA_DB_USER+':'+SQLA_DB_PASSWORD+'@'+SQLA_DB_HOST+'/'+SQLA_DB_NAME
+```
+
+rwhitear@ns1:/opt/web/powerdns-admin$ sudo -i
+root@ns1:~# cd /opt/web/powerdns-admin/
+root@ns1:/opt/web/powerdns-admin# . ./flask/bin/activate
+(flask) root@ns1:/opt/web/powerdns-admin#
+
+(flask) root@ns1:/opt/web/powerdns-admin# export FLASK_APP=powerdnsadmin/__init__.py
+
+(flask) root@ns1:/opt/web/powerdns-admin# flask db upgrade
+
+
+``` sh
+INFO  [alembic.runtime.migration] Context impl MySQLImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 787bdba9e147, Init DB
+INFO  [alembic.runtime.migration] Running upgrade 787bdba9e147 -> 59729e468045, Add view column to setting table
+INFO  [alembic.runtime.migration] Running upgrade 59729e468045 -> 1274ed462010, Change setting.value data type
+INFO  [alembic.runtime.migration] Running upgrade 1274ed462010 -> 4a666113c7bb, Adding Operator Role
+INFO  [alembic.runtime.migration] Running upgrade 4a666113c7bb -> 31a4ed468b18, Remove all setting in the DB
+INFO  [alembic.runtime.migration] Running upgrade 31a4ed468b18 -> 654298797277, Upgrade DB Schema
+INFO  [alembic.runtime.migration] Running upgrade 654298797277 -> 0fb6d23a4863, Remove user avatar
+INFO  [alembic.runtime.migration] Running upgrade 0fb6d23a4863 -> 856bb94b7040, Add comment column in domain template record table
+INFO  [alembic.runtime.migration] Running upgrade 856bb94b7040 -> b0fea72a3f20, Update domain serial columns type
+INFO  [alembic.runtime.migration] Running upgrade b0fea72a3f20 -> 3f76448bb6de, Add user.confirmed column
+```
+
+(flask) root@ns1:/opt/web/powerdns-admin# yarn install --pure-lockfile
+
+(flask) root@ns1:/opt/web/powerdns-admin# flask assets build
+
+(flask) root@ns1:/opt/web/powerdns-admin# ./run.py
+
+``` sh
+ * Serving Flask app "powerdnsadmin" (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: on
+[2020-04-29 08:00:02,873] [_internal.py:113] INFO -  * Running on http://0.0.0.0:9191/ (Press CTRL+C to quit)
+[2020-04-29 08:00:02,874] [_internal.py:113] INFO -  * Restarting with stat
+[2020-04-29 08:00:03,503] [_internal.py:113] WARNING -  * Debugger is active!
+[2020-04-29 08:00:03,521] [_internal.py:113] INFO -  * Debugger PIN: 276-254-404
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 **rwhitear@dns-01:~$** sudo apt-get install -y libmysqlclient-dev python-mysqldb libsasl2-dev libffi-dev libldap2-dev libssl-dev libxml2-dev libxslt1-dev libxmlsec1-dev pkg-config
 
 
