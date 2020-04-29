@@ -4,6 +4,7 @@
 Using instructions from:
 * https://computingforgeeks.com/install-powerdns-and-powerdns-admin-on-ubuntu-18-04-debian-9-mariadb-backend/
 * https://computingforgeeks.com/install-mariadb-10-on-ubuntu-18-04-and-centos-7/
+* https://docs.powerdns.com/recursor/getting-started.html
 
 Websites used in understanding how all this works:
 * https://github.com/ngoduykhanh/PowerDNS-Admin
@@ -317,20 +318,20 @@ CREATE UNIQUE INDEX namealgoindex ON tsigkeys(name, algorithm);
 ```
 
 ```sh
-MariaDB [powerdns]> CREATE TABLE records (
-    ->   id                    BIGINT AUTO_INCREMENT,
-    ->   domain_id             INT DEFAULT NULL,
-    ->   name                  VARCHAR(255) DEFAULT NULL,
-    ->   type                  VARCHAR(10) DEFAULT NULL,
-    ->   content               VARCHAR(64000) DEFAULT NULL,
-    ->   ttl                   INT DEFAULT NULL,
-    ->   prio                  INT DEFAULT NULL,
-    ->   change_date           INT DEFAULT NULL,
-    ->   disabled              TINYINT(1) DEFAULT 0,
-    ->   ordername             VARCHAR(255) BINARY DEFAULT NULL,
-    ->   auth                  TINYINT(1) DEFAULT 1,
-    ->   PRIMARY KEY (id)
-    -> ) Engine=InnoDB CHARACTER SET 'latin1';
+MariaDB [powerdns]> CREATE TABLE records ( \
+       id                    BIGINT AUTO_INCREMENT, \
+       domain_id             INT DEFAULT NULL, \
+       name                  VARCHAR(255) DEFAULT NULL, \
+       type                  VARCHAR(10) DEFAULT NULL, \
+       content               VARCHAR(64000) DEFAULT NULL, \
+       ttl                   INT DEFAULT NULL, \
+       prio                  INT DEFAULT NULL, \
+       change_date           INT DEFAULT NULL, \
+       disabled              TINYINT(1) DEFAULT 0, \
+       ordername             VARCHAR(255) BINARY DEFAULT NULL, \
+       auth                  TINYINT(1) DEFAULT 1, \
+       PRIMARY KEY (id) \
+     ) Engine=InnoDB CHARACTER SET 'latin1';
 Query OK, 0 rows affected (0.018 sec)
 
 MariaDB [powerdns]>
@@ -564,6 +565,132 @@ Mar 12 11:13:51 dns-01 pdns_server[25790]: Done launching threads, ready to dist
 tcp        0      0 0.0.0.0:domain          0.0.0.0:*               LISTEN      25790/pdns_server
 tcp6       0      0 [::]:domain             [::]:*                  LISTEN      25790/pdns_server
 ```
+
+``` sh
+rwhitear@ns2:~$ sudo vi /etc/powerdns/pdns.conf
+```
+
+``` sh
+#################################
+# local-port    The port on which we listen
+#
+local-port=5300
+```
+
+``` sh
+rwhitear@ns1:~$ sudo systemctl restart pdns
+rwhitear@ns1:~$ sudo systemctl status pdns
+```
+
+``` sh
+● pdns.service - PowerDNS Authoritative Server
+   Loaded: loaded (/lib/systemd/system/pdns.service; enabled; vendor preset: enabled)
+   Active: active (running) since Wed 2020-04-29 06:46:58 UTC; 8s ago
+     Docs: man:pdns_server(1)
+           man:pdns_control(1)
+           https://doc.powerdns.com
+ Main PID: 5832 (pdns_server)
+    Tasks: 8 (limit: 4660)
+   CGroup: /system.slice/pdns.service
+           └─5832 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+
+Apr 29 06:46:58 ns1 pdns_server[5832]: TCPv6 server bound to [::]:5300
+Apr 29 06:46:58 ns1 pdns_server[5832]: PowerDNS Authoritative Server 4.1.1 (C) 2001-2017 PowerDNS.COM BV
+Apr 29 06:46:58 ns1 pdns_server[5832]: Using 64-bits mode. Built using gcc 7.3.0.
+Apr 29 06:46:58 ns1 pdns_server[5832]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to
+Apr 29 06:46:58 ns1 pdns_server[5832]: Creating backend connection for TCP
+Apr 29 06:46:58 ns1 pdns_server[5832]: [bindbackend] Parsing 0 domain(s), will report when done
+Apr 29 06:46:58 ns1 pdns_server[5832]: [bindbackend] Done parsing domains, 0 rejected, 0 new, 0 removed
+Apr 29 06:46:58 ns1 systemd[1]: Started PowerDNS Authoritative Server.
+Apr 29 06:46:58 ns1 pdns_server[5832]: About to create 3 backend threads for UDP
+Apr 29 06:46:58 ns1 pdns_server[5832]: Done launching threads, ready to distribute questions
+```
+
+# Install PowerDNS recursor
+
+``` sh
+rwhitear@ns2:~$ sudo apt-get update
+```
+
+``` sh
+rwhitear@ns2:~$ sudo apt-get install pdns-recursor
+```
+
+``` sh
+rwhitear@ns1:~$ pdns_recursor --no-config --config | grep config-dir
+# api-config-dir	Directory where REST API stores config and zones
+# api-config-dir=
+# config-dir	Location of configuration directory (recursor.conf)
+# config-dir=/etc/powerdns
+```
+
+``` sh
+rwhitear@ns1:~$ sudo vi /etc/powerdns/recursor.conf
+```
+
+``` #!/bin/sh
+#################################
+# allow-from    If set, only allow these comma separated netmasks to recurse
+#
+allow-from=127.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 169.254.0.0/16, 192.168.0.0/16, 172.16.0.0/12, ::1/128, fc00::/7, fe80::/10
+
+#################################
+# local-address IP addresses to listen on, separated by spaces or commas. Also accepts ports.
+#
+local-address=127.0.0.1,10.237.97.134
+```
+
+``` sh
+rwhitear@ns1:~$ sudo systemctl restart pdns-recursor
+rwhitear@ns1:~$ sudo systemctl status pdns-recursor
+```
+
+``` sh
+● pdns-recursor.service - PowerDNS Recursor
+   Loaded: loaded (/lib/systemd/system/pdns-recursor.service; enabled; vendor preset: enabled)
+   Active: active (running) since Wed 2020-04-29 06:48:36 UTC; 6s ago
+     Docs: man:pdns_recursor(1)
+           man:rec_control(1)
+           https://doc.powerdns.com
+ Main PID: 5881 (pdns_recursor)
+    Tasks: 4 (limit: 4660)
+   CGroup: /system.slice/pdns-recursor.service
+           └─5881 /usr/sbin/pdns_recursor --daemon=no --write-pid=no --disable-syslog --log-timestamp=no
+
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Listening for TCP queries on 127.0.0.1:53
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Listening for TCP queries on 10.237.97.134:53
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Set effective group id to 114
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Set effective user id to 112
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Launching 3 threads
+Apr 29 06:48:36 ns1 systemd[1]: Started PowerDNS Recursor.
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Done priming cache with root hints
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Done priming cache with root hints
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Enabled 'epoll' multiplexer
+Apr 29 06:48:36 ns1 pdns_recursor[5881]: Done priming cache with root hints
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Install PowerDNS admin
 
